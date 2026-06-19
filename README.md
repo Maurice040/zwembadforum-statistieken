@@ -1,15 +1,17 @@
 # Zwembadforum Advertentie Statistieken
 
-Zelfstandige WordPress-plugin voor het meten van impressies en kliks op de vaste advertentie onder bbPress-topics op Zwembadforum.
+Zelfstandige WordPress-plugin voor het meten van impressies en kliks op de vaste advertentie en kliks op handtekeninglinks onder bbPress-topics op Zwembadforum.
 
 ## Wat deze plugin doet
 
 - Meet advertentie-impressies zodra minimaal 50 procent van het blok zichtbaar is.
 - Meet advertentiekliks op vaste topicadvertenties.
+- Meet links in `.forum-signature` en gangbare bbPress-handtekeningcontainers als aparte plaatsing.
 - Ondersteunt de bestaande selectors `.banner-desktop a`, `.banner-mobile a` en `.zf-managed-topic-ad a`.
 - Beperkt impressies per bezoeker, topic en bestemming tot maximaal een keer per 30 minuten.
 - Bewaart impressies compact als dagtotalen per bestemmings-URL.
-- Bewaart topic- en forumdetails alleen bij echte advertentiekliks.
+- Bewaart topic- en forumdetails alleen bij echte advertentie- of handtekeningkliks.
+- Houdt advertentie- en handtekeningkliks apart, zodat de advertentie-CTR zuiver blijft.
 - Toont totalen en CTR in een eigen adminpagina.
 - Toont een samenvatting op het WordPress-hoofddashboard.
 - Ruimt oude statistieken automatisch op.
@@ -27,9 +29,9 @@ Deze repo is ingericht om zipbestanden automatisch te bouwen via GitHub Actions.
 
 1. Werk de pluginversie bij in `zwembadforum-advertentie-statistieken.php` en `readme.txt`.
 2. Commit en push naar `main`.
-3. Maak een tag in de vorm `v1.0.4`.
+3. Maak een tag in de vorm `v1.2.0`.
 4. Push de tag naar GitHub.
-5. De workflow bouwt automatisch `zwembadforum-advertentie-statistieken-1.0.4.zip` en hangt die aan de GitHub Release.
+5. De workflow bouwt automatisch `zwembadforum-advertentie-statistieken-1.2.0.zip` en hangt die aan de GitHub Release.
 
 ### Handmatige build
 

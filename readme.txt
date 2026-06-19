@@ -2,9 +2,9 @@
 Contributors: zwembadforum
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 
-Meet impressies en kliks op advertenties op bbPress-topicpagina's.
+Meet impressies en kliks op advertenties en kliks op handtekeninglinks op bbPress-topicpagina's.
 
 == Functionaliteit ==
 
@@ -13,6 +13,7 @@ Meet impressies en kliks op advertenties op bbPress-topicpagina's.
 * Registreert impressies zodra minimaal 50 procent van de advertentie zichtbaar is.
 * Registreert per bezoeker, topic en bestemming maximaal een impressie per 30 minuten.
 * Registreert advertentiekliks.
+* Registreert kliks op links in bbPress-handtekeningen als aparte plaatsing.
 * Toont een zelfstandig overzicht onder Advertentie stats in wp-admin.
 * Toont de totalen van de laatste 30 dagen op het WordPress-hoofddashboard.
 * Splitst advertentiekliks uit naar desktop en mobiel.
@@ -32,6 +33,11 @@ Meet impressies en kliks op advertenties op bbPress-topicpagina's.
 De statistiektabel blijft bij deactiveren behouden.
 
 == Changelog ==
+
+= 1.2.0 =
+* Voegt klikmeting toe voor links in bbPress-handtekeningen.
+* Houdt handtekeningkliks apart van advertentiekliks en advertentie-CTR.
+* Toont de plaatsing, het apparaat, het forum en het topic bij iedere klikgroep.
 
 = 1.1.0 =
 * Voegt apparaatmeting toe voor desktop- en mobiele advertentiekliks.

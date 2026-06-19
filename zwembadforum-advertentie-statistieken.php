@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Zwembadforum Advertentie Statistieken
  * Description: Meet impressies en kliks op forumadvertenties en toont resultaten in WordPress en op het hoofddashboard.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Zwembadforum.eu
  * Requires at least: 6.0
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'ZF_FORUM_AD_STATS_VERSION' ) ) {
-	define( 'ZF_FORUM_AD_STATS_VERSION', '1.1.0' );
+	define( 'ZF_FORUM_AD_STATS_VERSION', '1.2.0' );
 }
 
 if ( ! defined( 'ZF_FORUM_AD_STATS_OPTION' ) ) {
@@ -213,7 +213,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_track_event' ) ) {
 			$event_type = sanitize_key( $payload['event_type'] );
 		}
 
-		if ( ! in_array( $event_type, array( 'view_promotion', 'select_promotion' ), true ) ) {
+		if ( ! in_array( $event_type, array( 'view_promotion', 'select_promotion', 'select_signature' ), true ) ) {
 			return false;
 		}
 
@@ -332,14 +332,21 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_tracker' ) ) {
 		}
 
 		$script .= '(function () {';
-		$script .= 'var selectors = [".banner-desktop a", ".banner-mobile a", ".zf-managed-topic-ad a"];';
-		$script .= 'var links = [];';
-		$script .= 'selectors.forEach(function (selector) {';
+		$script .= 'var adSelectors = [".banner-desktop a", ".banner-mobile a", ".zf-managed-topic-ad a"];';
+		$script .= 'var signatureSelectors = [".forum-signature a", ".bbp-reply-signature a", ".bbp-topic-signature a", ".bbp-signature a", ".user-signature a", ".signature a"];';
+		$script .= 'var adLinks = [];';
+		$script .= 'var signatureLinks = [];';
+		$script .= 'adSelectors.forEach(function (selector) {';
 		$script .= 'document.querySelectorAll(selector).forEach(function (node) {';
-		$script .= 'if (links.indexOf(node) === -1) { links.push(node); }';
+		$script .= 'if (adLinks.indexOf(node) === -1) { adLinks.push(node); }';
 		$script .= '});';
 		$script .= '});';
-		$script .= 'if (!links.length) { return; }';
+		$script .= 'signatureSelectors.forEach(function (selector) {';
+		$script .= 'document.querySelectorAll(selector).forEach(function (node) {';
+		$script .= 'if (adLinks.indexOf(node) === -1 && signatureLinks.indexOf(node) === -1) { signatureLinks.push(node); }';
+		$script .= '});';
+		$script .= '});';
+		$script .= 'if (!adLinks.length && !signatureLinks.length) { return; }';
 		$script .= 'var ajaxUrl = ' . wp_json_encode( admin_url( 'admin-ajax.php' ) ) . ';';
 		$script .= 'var basePayload = {';
 		$script .= 'action: "zf_forum_ad_stats_track",';
@@ -390,12 +397,15 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_tracker' ) ) {
 		$script .= 'if (entry.isIntersecting) { markImpression(entry.target); observer.unobserve(entry.target); }';
 		$script .= '});';
 		$script .= '}, { threshold: 0.5 });';
-		$script .= 'links.forEach(function (link) { observer.observe(link); });';
+		$script .= 'adLinks.forEach(function (link) { observer.observe(link); });';
 		$script .= '} else {';
-		$script .= 'links.forEach(markImpression);';
+		$script .= 'adLinks.forEach(markImpression);';
 		$script .= '}';
-		$script .= 'links.forEach(function (link) {';
+		$script .= 'adLinks.forEach(function (link) {';
 		$script .= 'link.addEventListener("click", function () { sendEvent("select_promotion", link.href, resolveDeviceType(link)); }, { passive: true });';
+		$script .= '});';
+		$script .= 'signatureLinks.forEach(function (link) {';
+		$script .= 'link.addEventListener("click", function () { sendEvent("select_signature", link.href, resolveDeviceType(link)); }, { passive: true });';
 		$script .= '});';
 		$script .= '})();';
 
@@ -429,6 +439,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_get_summary_rows' ) ) {
 		$sql = $wpdb->prepare(
 			"SELECT
 				destination_url,
+				event_type,
 				device_type,
 				topic_id,
 				forum_id,
@@ -437,9 +448,9 @@ if ( ! function_exists( 'zf_forum_ad_stats_get_summary_rows' ) ) {
 				MAX(topic_title) AS topic_title,
 				MAX(forum_title) AS forum_title
 			FROM {$table_name}
-			WHERE event_type = 'select_promotion'
+			WHERE event_type IN ('select_promotion', 'select_signature')
 				AND event_date >= DATE_SUB(CURDATE(), INTERVAL %d DAY)
-			GROUP BY destination_hash, destination_url, device_type, topic_id, forum_id
+			GROUP BY destination_hash, destination_url, event_type, device_type, topic_id, forum_id
 			ORDER BY clicks DESC, last_seen DESC",
 			$days
 		);
@@ -460,6 +471,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_get_daily_rows' ) ) {
 				event_date,
 				SUM(CASE WHEN event_type = 'view_promotion' THEN hits ELSE 0 END) AS impressions,
 				SUM(CASE WHEN event_type = 'select_promotion' THEN hits ELSE 0 END) AS clicks,
+				SUM(CASE WHEN event_type = 'select_signature' THEN hits ELSE 0 END) AS signature_clicks,
 				SUM(CASE WHEN event_type = 'select_promotion' AND device_type = 'desktop' THEN hits ELSE 0 END) AS desktop_clicks,
 				SUM(CASE WHEN event_type = 'select_promotion' AND device_type = 'mobile' THEN hits ELSE 0 END) AS mobile_clicks
 			FROM {$table_name}
@@ -481,6 +493,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 		$daily       = zf_forum_ad_stats_get_daily_rows( $days );
 		$total_views = 0;
 		$total_click = 0;
+		$total_signature_clicks = 0;
 		$total_desktop_clicks = 0;
 		$total_mobile_clicks = 0;
 		$ctr         = 0;
@@ -494,6 +507,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 		for ( $i = 0; $i < count( $daily ); $i++ ) {
 			$total_views += (int) $daily[ $i ]['impressions'];
 			$total_click += (int) $daily[ $i ]['clicks'];
+			$total_signature_clicks += (int) $daily[ $i ]['signature_clicks'];
 			$total_desktop_clicks += (int) $daily[ $i ]['desktop_clicks'];
 			$total_mobile_clicks += (int) $daily[ $i ]['mobile_clicks'];
 		}
@@ -504,7 +518,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 
 		echo '<div class="wrap">';
 		echo '<h1>Forum advertentie stats</h1>';
-		echo '<p>Overzicht van impressies en kliks op de vaste advertentie onder de openingspost op bbPress topicpagina\'s.</p>';
+		echo '<p>Overzicht van impressies en kliks op de vaste advertentie en van kliks op links in bbPress-handtekeningen.</p>';
 		echo '<form method="get" style="margin:16px 0 20px;">';
 		echo '<input type="hidden" name="page" value="zf-forum-ad-stats">';
 		echo '<label for="zf-forum-ad-stats-days"><strong>Periode</strong></label> ';
@@ -519,7 +533,8 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 
 		echo '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px;">';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Impressies</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_views ) ) . '</div></div>';
-		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Kliks</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_click ) ) . '</div></div>';
+		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Advertentiekliks</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_click ) ) . '</div></div>';
+		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Handtekening kliks</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_signature_clicks ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Desktop kliks</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_desktop_clicks ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Mobiele kliks</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_mobile_clicks ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">CTR</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $ctr, 2 ) ) . '%</div></div>';
@@ -527,10 +542,10 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 
 		echo '<h2>Kliks per topic</h2>';
 		echo '<p>Topics zonder advertentieklik worden niet afzonderlijk opgeslagen.</p>';
-		echo '<table class="widefat striped"><thead><tr><th>Bestemming</th><th>Apparaat</th><th>Forum</th><th>Topic</th><th>Kliks</th><th>Laatste klik</th></tr></thead><tbody>';
+		echo '<table class="widefat striped"><thead><tr><th>Bestemming</th><th>Plaatsing</th><th>Apparaat</th><th>Forum</th><th>Topic</th><th>Kliks</th><th>Laatste klik</th></tr></thead><tbody>';
 
 		if ( empty( $summary ) ) {
-			echo '<tr><td colspan="6">Nog geen advertentiekliks gevonden in deze periode.</td></tr>';
+			echo '<tr><td colspan="7">Nog geen kliks gevonden in deze periode.</td></tr>';
 		} else {
 			for ( $i = 0; $i < count( $summary ); $i++ ) {
 				$row         = $summary[ $i ];
@@ -540,6 +555,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 				$forum_label = ! empty( $row['forum_title'] ) ? $row['forum_title'] : '-';
 				$topic_label = ! empty( $row['topic_title'] ) ? $row['topic_title'] : '-';
 				$device_label = 'Onbekend';
+				$placement_label = 'select_signature' === $row['event_type'] ? 'Handtekening' : 'Advertentie';
 
 				if ( 'desktop' === $row['device_type'] ) {
 					$device_label = 'Desktop';
@@ -549,6 +565,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 
 				echo '<tr>';
 				echo '<td><a href="' . esc_url( $row['destination_url'] ) . '" target="_blank" rel="noopener">' . esc_html( $row['destination_url'] ) . '</a></td>';
+				echo '<td>' . esc_html( $placement_label ) . '</td>';
 				echo '<td>' . esc_html( $device_label ) . '</td>';
 				echo '<td>' . ( $forum_url ? '<a href="' . esc_url( $forum_url ) . '" target="_blank" rel="noopener">' . esc_html( $forum_label ) . '</a>' : esc_html( $forum_label ) ) . '</td>';
 				echo '<td>' . ( $topic_url ? '<a href="' . esc_url( $topic_url ) . '" target="_blank" rel="noopener">' . esc_html( $topic_label ) . '</a>' : esc_html( $topic_label ) ) . '</td>';
@@ -560,15 +577,16 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 
 		echo '</tbody></table>';
 		echo '<h2 style="margin-top:28px;">Per dag</h2>';
-		echo '<table class="widefat striped"><thead><tr><th>Datum</th><th>Impressies</th><th>Kliks</th><th>Desktop kliks</th><th>Mobiele kliks</th><th>CTR</th></tr></thead><tbody>';
+		echo '<table class="widefat striped"><thead><tr><th>Datum</th><th>Impressies</th><th>Advertentiekliks</th><th>Handtekeningkliks</th><th>Desktop kliks</th><th>Mobiele kliks</th><th>CTR</th></tr></thead><tbody>';
 
 		if ( empty( $daily ) ) {
-			echo '<tr><td colspan="6">Nog geen dagelijkse data gevonden in deze periode.</td></tr>';
+			echo '<tr><td colspan="7">Nog geen dagelijkse data gevonden in deze periode.</td></tr>';
 		} else {
 			for ( $i = 0; $i < count( $daily ); $i++ ) {
 				$row             = $daily[ $i ];
 				$day_impressions = (int) $row['impressions'];
 				$day_clicks      = (int) $row['clicks'];
+				$day_signature_clicks = (int) $row['signature_clicks'];
 				$day_desktop_clicks = (int) $row['desktop_clicks'];
 				$day_mobile_clicks = (int) $row['mobile_clicks'];
 				$day_ctr         = $day_impressions > 0 ? round( ( $day_clicks / $day_impressions ) * 100, 2 ) : 0;
@@ -577,6 +595,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 				echo '<td>' . esc_html( $row['event_date'] ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_impressions ) ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_clicks ) ) . '</td>';
+				echo '<td>' . esc_html( number_format_i18n( $day_signature_clicks ) ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_desktop_clicks ) ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_mobile_clicks ) ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_ctr, 2 ) ) . '%</td>';
@@ -606,6 +625,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_dashboard_widget' ) ) {
 			$daily       = zf_forum_ad_stats_get_daily_rows( 30 );
 		$total_views = 0;
 		$total_click = 0;
+		$total_signature_clicks = 0;
 		$total_desktop_clicks = 0;
 		$total_mobile_clicks = 0;
 		$top_row     = null;
@@ -616,6 +636,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_dashboard_widget' ) ) {
 			for ( $i = 0; $i < count( $daily ); $i++ ) {
 				$total_views += (int) $daily[ $i ]['impressions'];
 				$total_click += (int) $daily[ $i ]['clicks'];
+				$total_signature_clicks += (int) $daily[ $i ]['signature_clicks'];
 				$total_desktop_clicks += (int) $daily[ $i ]['desktop_clicks'];
 				$total_mobile_clicks += (int) $daily[ $i ]['mobile_clicks'];
 			}
@@ -631,16 +652,17 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_dashboard_widget' ) ) {
 			$ctr = round( ( $total_click / $total_views ) * 100, 2 );
 		}
 
-		echo '<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px;">';
+		echo '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;margin-bottom:16px;">';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">30d impressies</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_views ) ) . '</div></div>';
-		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">30d kliks</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_click ) ) . '</div></div>';
+		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Advertentiekliks</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_click ) ) . '</div></div>';
+		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Handtekening</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_signature_clicks ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Desktop</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_desktop_clicks ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Mobiel</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_mobile_clicks ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">30d CTR</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $ctr, 2 ) ) . '%</div></div>';
 		echo '</div>';
 
 		if ( $top_row ) {
-			echo '<p style="margin:0 0 8px;"><strong>Best presterende topic van de laatste 30 dagen</strong></p>';
+			echo '<p style="margin:0 0 8px;"><strong>Meest aangeklikte plaatsing van de laatste 30 dagen</strong></p>';
 			echo '<p style="margin:0 0 6px;"><a href="' . esc_url( $top_row['destination_url'] ) . '" target="_blank" rel="noopener">' . esc_html( $top_row['destination_url'] ) . '</a></p>';
 			echo '<p style="margin:0;color:#50575e;">' . esc_html( ! empty( $top_row['topic_title'] ) ? $top_row['topic_title'] : '-' ) . ' | ' . esc_html( number_format_i18n( (int) $top_row['clicks'] ) ) . ' kliks</p>';
 		} else {

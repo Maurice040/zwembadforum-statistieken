@@ -2,7 +2,7 @@
 Contributors: zwembadforum
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.0.4
+Stable tag: 1.1.0
 
 Meet impressies en kliks op advertenties op bbPress-topicpagina's.
 
@@ -15,6 +15,7 @@ Meet impressies en kliks op advertenties op bbPress-topicpagina's.
 * Registreert advertentiekliks.
 * Toont een zelfstandig overzicht onder Advertentie stats in wp-admin.
 * Toont de totalen van de laatste 30 dagen op het WordPress-hoofddashboard.
+* Splitst advertentiekliks uit naar desktop en mobiel.
 * Slaat impressies alleen als dagtotaal per bestemming op.
 * Slaat topic- en forumgegevens alleen op wanneer op de advertentie wordt geklikt.
 * Verwijdert automatisch statistieken ouder dan 365 dagen.
@@ -31,6 +32,11 @@ Meet impressies en kliks op advertenties op bbPress-topicpagina's.
 De statistiektabel blijft bij deactiveren behouden.
 
 == Changelog ==
+
+= 1.1.0 =
+* Voegt apparaatmeting toe voor desktop- en mobiele advertentiekliks.
+* Toont apparaattypes in het beheeroverzicht en op het dashboard.
+* Bestaande statistiekregels zonder apparaatlabel worden eenmalig op onbekend gezet.
 
 = 1.0.4 =
 * Impressies worden niet meer per bekeken topic opgeslagen.

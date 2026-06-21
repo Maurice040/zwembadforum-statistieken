@@ -16,6 +16,7 @@ Zelfstandige WordPress-plugin voor het meten van impressies en kliks op de vaste
 - Toont de CTR apart voor desktop en mobiel, inclusief de gebruikte impressies en kliks.
 - Toont desktop-, mobiele en oudere onbekende impressies als aparte totalen.
 - Controleert en herstelt de database-index waarmee desktop en mobiel afzonderlijk worden opgeslagen.
+- Splitst ook handtekeningkliks uit naar desktop, mobiel en oudere onbekende data.
 - Toont een samenvatting op het WordPress-hoofddashboard.
 - Ruimt oude statistieken automatisch op.
 
@@ -32,9 +33,9 @@ Deze repo is ingericht om zipbestanden automatisch te bouwen via GitHub Actions.
 
 1. Werk de pluginversie bij in `zwembadforum-advertentie-statistieken.php` en `readme.txt`.
 2. Commit en push naar `main`.
-3. Maak een tag in de vorm `v1.3.2`.
+3. Maak een tag in de vorm `v1.3.3`.
 4. Push de tag naar GitHub.
-5. De workflow bouwt automatisch `zwembadforum-advertentie-statistieken-1.3.2.zip` en hangt die aan de GitHub Release.
+5. De workflow bouwt automatisch `zwembadforum-advertentie-statistieken-1.3.3.zip` en hangt die aan de GitHub Release.
 
 ### Handmatige build
 

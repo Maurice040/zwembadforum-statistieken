@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Zwembadforum Advertentie Statistieken
  * Description: Meet impressies en kliks op forumadvertenties en toont resultaten in WordPress en op het hoofddashboard.
- * Version: 1.3.0
+ * Version: 1.3.1
  * Author: Zwembadforum.eu
  * Requires at least: 6.0
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'ZF_FORUM_AD_STATS_VERSION' ) ) {
-	define( 'ZF_FORUM_AD_STATS_VERSION', '1.3.0' );
+	define( 'ZF_FORUM_AD_STATS_VERSION', '1.3.1' );
 }
 
 if ( ! defined( 'ZF_FORUM_AD_STATS_OPTION' ) ) {
@@ -498,11 +498,15 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 		$total_signature_clicks = 0;
 		$total_desktop_impressions = 0;
 		$total_mobile_impressions = 0;
+		$total_unknown_impressions = 0;
 		$total_desktop_clicks = 0;
 		$total_mobile_clicks = 0;
+		$total_unknown_clicks = 0;
 		$ctr         = 0;
 		$desktop_ctr = 0;
 		$mobile_ctr  = 0;
+		$desktop_ctr_label = '-';
+		$mobile_ctr_label  = '-';
 		$i           = 0;
 		$row         = array();
 
@@ -520,16 +524,21 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 			$total_mobile_clicks += (int) $daily[ $i ]['mobile_clicks'];
 		}
 
+		$total_unknown_impressions = max( 0, $total_views - $total_desktop_impressions - $total_mobile_impressions );
+		$total_unknown_clicks = max( 0, $total_click - $total_desktop_clicks - $total_mobile_clicks );
+
 		if ( $total_views > 0 ) {
 			$ctr = round( ( $total_click / $total_views ) * 100, 2 );
 		}
 
 		if ( $total_desktop_impressions > 0 ) {
 			$desktop_ctr = round( ( $total_desktop_clicks / $total_desktop_impressions ) * 100, 2 );
+			$desktop_ctr_label = number_format_i18n( $desktop_ctr, 2 ) . '%';
 		}
 
 		if ( $total_mobile_impressions > 0 ) {
 			$mobile_ctr = round( ( $total_mobile_clicks / $total_mobile_impressions ) * 100, 2 );
+			$mobile_ctr_label = number_format_i18n( $mobile_ctr, 2 ) . '%';
 		}
 
 		echo '<div class="wrap">';
@@ -548,14 +557,18 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 		echo '</form>';
 
 		echo '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px;">';
-		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Impressies</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_views ) ) . '</div></div>';
+		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Impressies totaal</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_views ) ) . '</div></div>';
+		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Desktop impressies</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_desktop_impressions ) ) . '</div></div>';
+		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Mobiele impressies</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_mobile_impressions ) ) . '</div></div>';
+		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Onbekende impressies</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_unknown_impressions ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Advertentiekliks</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_click ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Handtekening kliks</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_signature_clicks ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Desktop kliks</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_desktop_clicks ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Mobiele kliks</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_mobile_clicks ) ) . '</div></div>';
+		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Onbekende kliks</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_unknown_clicks ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">CTR</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $ctr, 2 ) ) . '%</div></div>';
-		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Desktop CTR</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $desktop_ctr, 2 ) ) . '%</div><div style="font-size:12px;color:#646970;">' . esc_html( number_format_i18n( $total_desktop_clicks ) ) . ' / ' . esc_html( number_format_i18n( $total_desktop_impressions ) ) . '</div></div>';
-		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Mobiele CTR</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $mobile_ctr, 2 ) ) . '%</div><div style="font-size:12px;color:#646970;">' . esc_html( number_format_i18n( $total_mobile_clicks ) ) . ' / ' . esc_html( number_format_i18n( $total_mobile_impressions ) ) . '</div></div>';
+		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Desktop CTR</div><div style="font-size:28px;font-weight:700;">' . esc_html( $desktop_ctr_label ) . '</div><div style="font-size:12px;color:#646970;">' . esc_html( number_format_i18n( $total_desktop_clicks ) ) . ' kliks / ' . esc_html( number_format_i18n( $total_desktop_impressions ) ) . ' impressies</div></div>';
+		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Mobiele CTR</div><div style="font-size:28px;font-weight:700;">' . esc_html( $mobile_ctr_label ) . '</div><div style="font-size:12px;color:#646970;">' . esc_html( number_format_i18n( $total_mobile_clicks ) ) . ' kliks / ' . esc_html( number_format_i18n( $total_mobile_impressions ) ) . ' impressies</div></div>';
 		echo '</div>';
 
 		echo '<h2>Kliks per topic</h2>';
@@ -612,6 +625,8 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 				$day_ctr         = $day_impressions > 0 ? round( ( $day_clicks / $day_impressions ) * 100, 2 ) : 0;
 				$day_desktop_ctr = $day_desktop_impressions > 0 ? round( ( $day_desktop_clicks / $day_desktop_impressions ) * 100, 2 ) : 0;
 				$day_mobile_ctr  = $day_mobile_impressions > 0 ? round( ( $day_mobile_clicks / $day_mobile_impressions ) * 100, 2 ) : 0;
+				$day_desktop_ctr_label = $day_desktop_impressions > 0 ? number_format_i18n( $day_desktop_ctr, 2 ) . '%' : '-';
+				$day_mobile_ctr_label = $day_mobile_impressions > 0 ? number_format_i18n( $day_mobile_ctr, 2 ) . '%' : '-';
 
 				echo '<tr>';
 				echo '<td>' . esc_html( $row['event_date'] ) . '</td>';
@@ -620,10 +635,10 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 				echo '<td>' . esc_html( number_format_i18n( $day_signature_clicks ) ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_desktop_impressions ) ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_desktop_clicks ) ) . '</td>';
-				echo '<td>' . esc_html( number_format_i18n( $day_desktop_ctr, 2 ) ) . '%</td>';
+				echo '<td>' . esc_html( $day_desktop_ctr_label ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_mobile_impressions ) ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_mobile_clicks ) ) . '</td>';
-				echo '<td>' . esc_html( number_format_i18n( $day_mobile_ctr, 2 ) ) . '%</td>';
+				echo '<td>' . esc_html( $day_mobile_ctr_label ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_ctr, 2 ) ) . '%</td>';
 				echo '</tr>';
 			}
@@ -654,12 +669,16 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_dashboard_widget' ) ) {
 		$total_signature_clicks = 0;
 		$total_desktop_impressions = 0;
 		$total_mobile_impressions = 0;
+		$total_unknown_impressions = 0;
 		$total_desktop_clicks = 0;
 		$total_mobile_clicks = 0;
+		$total_unknown_clicks = 0;
 		$top_row     = null;
 		$ctr         = 0;
 		$desktop_ctr = 0;
 		$mobile_ctr  = 0;
+		$desktop_ctr_label = '-';
+		$mobile_ctr_label  = '-';
 		$i           = 0;
 		$row         = array();
 
@@ -672,6 +691,9 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_dashboard_widget' ) ) {
 				$total_desktop_clicks += (int) $daily[ $i ]['desktop_clicks'];
 				$total_mobile_clicks += (int) $daily[ $i ]['mobile_clicks'];
 			}
+
+		$total_unknown_impressions = max( 0, $total_views - $total_desktop_impressions - $total_mobile_impressions );
+		$total_unknown_clicks = max( 0, $total_click - $total_desktop_clicks - $total_mobile_clicks );
 
 			for ( $i = 0; $i < count( $summary ); $i++ ) {
 				$row = $summary[ $i ];
@@ -686,21 +708,27 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_dashboard_widget' ) ) {
 
 		if ( $total_desktop_impressions > 0 ) {
 			$desktop_ctr = round( ( $total_desktop_clicks / $total_desktop_impressions ) * 100, 2 );
+			$desktop_ctr_label = number_format_i18n( $desktop_ctr, 2 ) . '%';
 		}
 
 		if ( $total_mobile_impressions > 0 ) {
 			$mobile_ctr = round( ( $total_mobile_clicks / $total_mobile_impressions ) * 100, 2 );
+			$mobile_ctr_label = number_format_i18n( $mobile_ctr, 2 ) . '%';
 		}
 
 		echo '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;margin-bottom:16px;">';
-		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">30d impressies</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_views ) ) . '</div></div>';
+		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Impressies totaal</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_views ) ) . '</div></div>';
+		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Desktop imp.</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_desktop_impressions ) ) . '</div></div>';
+		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Mobiele imp.</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_mobile_impressions ) ) . '</div></div>';
+		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Onbekende imp.</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_unknown_impressions ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Advertentiekliks</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_click ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Handtekening</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_signature_clicks ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Desktop</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_desktop_clicks ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Mobiel</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_mobile_clicks ) ) . '</div></div>';
+		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Onbekende kliks</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_unknown_clicks ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">30d CTR</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $ctr, 2 ) ) . '%</div></div>';
-		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Desktop CTR</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $desktop_ctr, 2 ) ) . '%</div><div style="font-size:11px;color:#646970;">' . esc_html( number_format_i18n( $total_desktop_clicks ) ) . ' / ' . esc_html( number_format_i18n( $total_desktop_impressions ) ) . '</div></div>';
-		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Mobiele CTR</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $mobile_ctr, 2 ) ) . '%</div><div style="font-size:11px;color:#646970;">' . esc_html( number_format_i18n( $total_mobile_clicks ) ) . ' / ' . esc_html( number_format_i18n( $total_mobile_impressions ) ) . '</div></div>';
+		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Desktop CTR</div><div style="font-size:24px;font-weight:700;">' . esc_html( $desktop_ctr_label ) . '</div><div style="font-size:11px;color:#646970;">' . esc_html( number_format_i18n( $total_desktop_clicks ) ) . ' kliks / ' . esc_html( number_format_i18n( $total_desktop_impressions ) ) . ' imp.</div></div>';
+		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Mobiele CTR</div><div style="font-size:24px;font-weight:700;">' . esc_html( $mobile_ctr_label ) . '</div><div style="font-size:11px;color:#646970;">' . esc_html( number_format_i18n( $total_mobile_clicks ) ) . ' kliks / ' . esc_html( number_format_i18n( $total_mobile_impressions ) ) . ' imp.</div></div>';
 		echo '</div>';
 
 		if ( $top_row ) {

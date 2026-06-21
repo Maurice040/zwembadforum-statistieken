@@ -2,7 +2,7 @@
 Contributors: zwembadforum
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 
 Meet impressies en kliks op advertenties en kliks op handtekeninglinks op bbPress-topicpagina's.
 
@@ -34,6 +34,12 @@ Meet impressies en kliks op advertenties en kliks op handtekeninglinks op bbPres
 De statistiektabel blijft bij deactiveren behouden.
 
 == Changelog ==
+
+= 1.3.1 =
+* Toont desktop-, mobiele en onbekende impressies als afzonderlijke totalen.
+* Toont ook het aantal advertentiekliks waarvan het apparaattype onbekend is.
+* Vervangt 0,00 procent door een streepje wanneer een apparaat geen geregistreerde impressies heeft.
+* Schrijft de CTR-berekening voluit als kliks gedeeld door impressies.
 
 = 1.3.0 =
 * Voegt desktop-CTR en mobiele CTR toe aan het beheeroverzicht en dashboard.

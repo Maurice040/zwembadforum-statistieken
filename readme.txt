@@ -2,7 +2,7 @@
 Contributors: zwembadforum
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 
 Meet impressies en kliks op advertenties en kliks op handtekeninglinks op bbPress-topicpagina's.
 
@@ -17,6 +17,7 @@ Meet impressies en kliks op advertenties en kliks op handtekeninglinks op bbPres
 * Toont een zelfstandig overzicht onder Advertentie stats in wp-admin.
 * Toont de totalen van de laatste 30 dagen op het WordPress-hoofddashboard.
 * Splitst advertentiekliks uit naar desktop en mobiel.
+* Toont de advertentie-CTR apart voor desktop en mobiel.
 * Slaat impressies alleen als dagtotaal per bestemming op.
 * Slaat topic- en forumgegevens alleen op wanneer op de advertentie wordt geklikt.
 * Verwijdert automatisch statistieken ouder dan 365 dagen.
@@ -33,6 +34,12 @@ Meet impressies en kliks op advertenties en kliks op handtekeninglinks op bbPres
 De statistiektabel blijft bij deactiveren behouden.
 
 == Changelog ==
+
+= 1.3.0 =
+* Voegt desktop-CTR en mobiele CTR toe aan het beheeroverzicht en dashboard.
+* Toont per dag de impressies, kliks en CTR per apparaattype.
+* Berekent apparaat-CTR alleen met impressies waarvan het apparaattype bekend is.
+* Verzendt handtekeningkliks betrouwbaar tijdens het openen van de bestemmingspagina.
 
 = 1.2.0 =
 * Voegt klikmeting toe voor links in bbPress-handtekeningen.

@@ -2,7 +2,7 @@
 Contributors: zwembadforum
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.3.1
+Stable tag: 1.3.2
 
 Meet impressies en kliks op advertenties en kliks op handtekeninglinks op bbPress-topicpagina's.
 
@@ -34,6 +34,12 @@ Meet impressies en kliks op advertenties en kliks op handtekeninglinks op bbPres
 De statistiektabel blijft bij deactiveren behouden.
 
 == Changelog ==
+
+= 1.3.2 =
+* Herstelt expliciet de database-index die desktop- en mobiele gebeurtenissen van oudere installaties kon samenvoegen.
+* Slaat nieuwe desktop- en mobiele impressies voortaan gegarandeerd in afzonderlijke dagregels op.
+* Maakt de lokale impressiebeperking apparaatspecifiek.
+* Reeds samengevoegde historische impressies blijven ongewijzigd omdat die niet betrouwbaar achteraf te splitsen zijn.
 
 = 1.3.1 =
 * Toont desktop-, mobiele en onbekende impressies als afzonderlijke totalen.

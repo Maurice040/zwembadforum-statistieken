@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Zwembadforum Advertentie Statistieken
  * Description: Meet impressies en kliks op forumadvertenties en toont resultaten in WordPress en op het hoofddashboard.
- * Version: 1.3.1
+ * Version: 1.3.2
  * Author: Zwembadforum.eu
  * Requires at least: 6.0
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'ZF_FORUM_AD_STATS_VERSION' ) ) {
-	define( 'ZF_FORUM_AD_STATS_VERSION', '1.3.1' );
+	define( 'ZF_FORUM_AD_STATS_VERSION', '1.3.2' );
 }
 
 if ( ! defined( 'ZF_FORUM_AD_STATS_OPTION' ) ) {
@@ -84,6 +84,53 @@ if ( ! function_exists( 'zf_forum_ad_stats_maybe_create_table' ) ) {
 }
 add_action( 'init', 'zf_forum_ad_stats_maybe_create_table', 5 );
 
+if ( ! function_exists( 'zf_forum_ad_stats_maybe_fix_device_index' ) ) {
+	function zf_forum_ad_stats_maybe_fix_device_index() {
+		global $wpdb;
+
+		$table_name = zf_forum_ad_stats_table_name();
+		$index_rows = $wpdb->get_results(
+			"SHOW INDEX FROM {$table_name} WHERE Key_name = 'daily_event_unique'",
+			ARRAY_A
+		);
+		$columns    = array();
+		$row        = array();
+
+		foreach ( $index_rows as $row ) {
+			$columns[ (int) $row['Seq_in_index'] ] = $row['Column_name'];
+		}
+
+		ksort( $columns );
+
+		if (
+			array_values( $columns ) === array(
+				'event_date',
+				'event_type',
+				'device_type',
+				'topic_id',
+				'forum_id',
+				'destination_hash',
+			)
+		) {
+			return;
+		}
+
+		if ( empty( $columns ) ) {
+			$wpdb->query(
+				"ALTER TABLE {$table_name}
+				ADD UNIQUE KEY daily_event_unique (event_date,event_type,device_type,topic_id,forum_id,destination_hash)"
+			);
+		} else {
+			$wpdb->query(
+				"ALTER TABLE {$table_name}
+				DROP INDEX daily_event_unique,
+				ADD UNIQUE KEY daily_event_unique (event_date,event_type,device_type,topic_id,forum_id,destination_hash)"
+			);
+		}
+	}
+}
+add_action( 'init', 'zf_forum_ad_stats_maybe_fix_device_index', 6 );
+
 if ( ! function_exists( 'zf_forum_ad_stats_maybe_migrate_data' ) ) {
 	function zf_forum_ad_stats_maybe_migrate_data() {
 		global $wpdb;
@@ -141,7 +188,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_maybe_migrate_data' ) ) {
 		update_option( ZF_FORUM_AD_STATS_DATA_OPTION, 3, false );
 	}
 }
-add_action( 'init', 'zf_forum_ad_stats_maybe_migrate_data', 6 );
+add_action( 'init', 'zf_forum_ad_stats_maybe_migrate_data', 7 );
 
 if ( ! function_exists( 'zf_forum_ad_stats_cleanup' ) ) {
 	function zf_forum_ad_stats_cleanup() {
@@ -184,7 +231,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_maybe_schedule_cleanup' ) ) {
 		}
 	}
 }
-add_action( 'init', 'zf_forum_ad_stats_maybe_schedule_cleanup', 7 );
+add_action( 'init', 'zf_forum_ad_stats_maybe_schedule_cleanup', 8 );
 
 if ( ! function_exists( 'zf_forum_ad_stats_activate' ) ) {
 	function zf_forum_ad_stats_activate() {
@@ -375,7 +422,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_tracker' ) ) {
 		$script .= 'function canTrackImpression(link) {';
 		$script .= 'var now = Date.now();';
 		$script .= 'var windowMs = 30 * 60 * 1000;';
-		$script .= 'var storageKey = "zf_forum_ad_view_" + basePayload.topic_id + "_" + encodeURIComponent(link.href);';
+		$script .= 'var storageKey = "zf_forum_ad_view_" + resolveDeviceType(link) + "_" + basePayload.topic_id + "_" + encodeURIComponent(link.href);';
 		$script .= 'try {';
 		$script .= 'var previous = parseInt(window.localStorage.getItem(storageKey) || "0", 10);';
 		$script .= 'if (previous && now - previous < windowMs) { return false; }';

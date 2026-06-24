@@ -2,7 +2,7 @@
 Contributors: zwembadforum
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.3.4
+Stable tag: 1.3.5
 
 Meet impressies en kliks op advertenties en kliks op handtekeninglinks op bbPress-topicpagina's.
 
@@ -35,6 +35,11 @@ Meet impressies en kliks op advertenties en kliks op handtekeninglinks op bbPres
 De statistiektabel blijft bij deactiveren behouden.
 
 == Changelog ==
+
+= 1.3.5 =
+* Maakt het dashboardwidget veel compacter met alleen kerncijfers en twee samenvattingsblokken.
+* Groepeert het beheeroverzicht in hoofd-KPI's, advertentie-uitplitsing en extra klikbronnen.
+* Vereenvoudigt de dagtabel zodat apparaatdata per dag in twee compacte kolommen staat in plaats van een breed raster.
 
 = 1.3.4 =
 * Meet kliks op mini-cursuslinks in de header als aparte plaatsing.

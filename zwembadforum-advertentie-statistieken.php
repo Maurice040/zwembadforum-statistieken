@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Zwembadforum Advertentie Statistieken
- * Description: Meet impressies en kliks op forumadvertenties en toont resultaten in WordPress en op het hoofddashboard.
- * Version: 1.3.3
+ * Description: Meet advertentie-impressies en kliks op advertenties, handtekeningen en headerlinks en toont resultaten in WordPress.
+ * Version: 1.3.4
  * Author: Zwembadforum.eu
  * Requires at least: 6.0
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'ZF_FORUM_AD_STATS_VERSION' ) ) {
-	define( 'ZF_FORUM_AD_STATS_VERSION', '1.3.3' );
+	define( 'ZF_FORUM_AD_STATS_VERSION', '1.3.4' );
 }
 
 if ( ! defined( 'ZF_FORUM_AD_STATS_OPTION' ) ) {
@@ -260,7 +260,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_track_event' ) ) {
 			$event_type = sanitize_key( $payload['event_type'] );
 		}
 
-		if ( ! in_array( $event_type, array( 'view_promotion', 'select_promotion', 'select_signature' ), true ) ) {
+		if ( ! in_array( $event_type, array( 'view_promotion', 'select_promotion', 'select_signature', 'select_header_link' ), true ) ) {
 			return false;
 		}
 
@@ -358,31 +358,31 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_tracker' ) ) {
 		$forum_title = '';
 		$script      = '';
 
-		if ( ! function_exists( 'bbp_is_single_topic' ) || ! bbp_is_single_topic() ) {
-			return;
-		}
+		if ( function_exists( 'bbp_is_single_topic' ) && bbp_is_single_topic() ) {
+			if ( function_exists( 'bbp_get_topic_id' ) ) {
+				$topic_id = (int) bbp_get_topic_id();
+			}
 
-		if ( function_exists( 'bbp_get_topic_id' ) ) {
-			$topic_id = (int) bbp_get_topic_id();
-		}
+			if ( function_exists( 'bbp_get_topic_forum_id' ) ) {
+				$forum_id = (int) bbp_get_topic_forum_id( $topic_id );
+			}
 
-		if ( function_exists( 'bbp_get_topic_forum_id' ) ) {
-			$forum_id = (int) bbp_get_topic_forum_id( $topic_id );
-		}
+			if ( $topic_id ) {
+				$topic_title = wp_strip_all_tags( get_the_title( $topic_id ) );
+			}
 
-		if ( $topic_id ) {
-			$topic_title = wp_strip_all_tags( get_the_title( $topic_id ) );
-		}
-
-		if ( $forum_id ) {
-			$forum_title = wp_strip_all_tags( get_the_title( $forum_id ) );
+			if ( $forum_id ) {
+				$forum_title = wp_strip_all_tags( get_the_title( $forum_id ) );
+			}
 		}
 
 		$script .= '(function () {';
 		$script .= 'var adSelectors = [".banner-desktop a", ".banner-mobile a", ".zf-managed-topic-ad a"];';
 		$script .= 'var signatureSelectors = [".forum-signature a", ".bbp-reply-signature a", ".bbp-topic-signature a", ".bbp-signature a", ".user-signature a", ".signature a"];';
+		$script .= 'var headerSelectors = ["a[data-zf-track=\\"mini-cursus\\"]", "a.zf-mini-cursus-link", "header a[href*=\\"mini-cursus\\"]", "header a[href*=\\"mini-cursussen\\"]", ".site-header a[href*=\\"mini-cursus\\"]", ".site-header a[href*=\\"mini-cursussen\\"]"];';
 		$script .= 'var adLinks = [];';
 		$script .= 'var signatureLinks = [];';
+		$script .= 'var headerLinks = [];';
 		$script .= 'adSelectors.forEach(function (selector) {';
 		$script .= 'document.querySelectorAll(selector).forEach(function (node) {';
 		$script .= 'if (adLinks.indexOf(node) === -1) { adLinks.push(node); }';
@@ -393,7 +393,12 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_tracker' ) ) {
 		$script .= 'if (adLinks.indexOf(node) === -1 && signatureLinks.indexOf(node) === -1) { signatureLinks.push(node); }';
 		$script .= '});';
 		$script .= '});';
-		$script .= 'if (!adLinks.length && !signatureLinks.length) { return; }';
+		$script .= 'headerSelectors.forEach(function (selector) {';
+		$script .= 'document.querySelectorAll(selector).forEach(function (node) {';
+		$script .= 'if (adLinks.indexOf(node) === -1 && signatureLinks.indexOf(node) === -1 && headerLinks.indexOf(node) === -1) { headerLinks.push(node); }';
+		$script .= '});';
+		$script .= '});';
+		$script .= 'if (!adLinks.length && !signatureLinks.length && !headerLinks.length) { return; }';
 		$script .= 'var ajaxUrl = ' . wp_json_encode( admin_url( 'admin-ajax.php' ) ) . ';';
 		$script .= 'var basePayload = {';
 		$script .= 'action: "zf_forum_ad_stats_track",';
@@ -454,6 +459,9 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_tracker' ) ) {
 		$script .= 'signatureLinks.forEach(function (link) {';
 		$script .= 'link.addEventListener("click", function () { sendEvent("select_signature", link.href, resolveDeviceType(link)); }, { passive: true });';
 		$script .= '});';
+		$script .= 'headerLinks.forEach(function (link) {';
+		$script .= 'link.addEventListener("click", function () { sendEvent("select_header_link", link.href, resolveDeviceType(link)); }, { passive: true });';
+		$script .= '});';
 		$script .= '})();';
 
 		echo '<script>' . $script . '</script>';
@@ -495,7 +503,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_get_summary_rows' ) ) {
 				MAX(topic_title) AS topic_title,
 				MAX(forum_title) AS forum_title
 			FROM {$table_name}
-			WHERE event_type IN ('select_promotion', 'select_signature')
+			WHERE event_type IN ('select_promotion', 'select_signature', 'select_header_link')
 				AND event_date >= DATE_SUB(CURDATE(), INTERVAL %d DAY)
 			GROUP BY destination_hash, destination_url, event_type, device_type, topic_id, forum_id
 			ORDER BY clicks DESC, last_seen DESC",
@@ -521,8 +529,11 @@ if ( ! function_exists( 'zf_forum_ad_stats_get_daily_rows' ) ) {
 				SUM(CASE WHEN event_type = 'view_promotion' AND device_type = 'mobile' THEN hits ELSE 0 END) AS mobile_impressions,
 				SUM(CASE WHEN event_type = 'select_promotion' THEN hits ELSE 0 END) AS clicks,
 				SUM(CASE WHEN event_type = 'select_signature' THEN hits ELSE 0 END) AS signature_clicks,
+				SUM(CASE WHEN event_type = 'select_header_link' THEN hits ELSE 0 END) AS header_clicks,
 				SUM(CASE WHEN event_type = 'select_signature' AND device_type = 'desktop' THEN hits ELSE 0 END) AS desktop_signature_clicks,
 				SUM(CASE WHEN event_type = 'select_signature' AND device_type = 'mobile' THEN hits ELSE 0 END) AS mobile_signature_clicks,
+				SUM(CASE WHEN event_type = 'select_header_link' AND device_type = 'desktop' THEN hits ELSE 0 END) AS desktop_header_clicks,
+				SUM(CASE WHEN event_type = 'select_header_link' AND device_type = 'mobile' THEN hits ELSE 0 END) AS mobile_header_clicks,
 				SUM(CASE WHEN event_type = 'select_promotion' AND device_type = 'desktop' THEN hits ELSE 0 END) AS desktop_clicks,
 				SUM(CASE WHEN event_type = 'select_promotion' AND device_type = 'mobile' THEN hits ELSE 0 END) AS mobile_clicks
 			FROM {$table_name}
@@ -545,9 +556,13 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 		$total_views = 0;
 		$total_click = 0;
 		$total_signature_clicks = 0;
+		$total_header_clicks = 0;
 		$total_desktop_signature_clicks = 0;
 		$total_mobile_signature_clicks = 0;
 		$total_unknown_signature_clicks = 0;
+		$total_desktop_header_clicks = 0;
+		$total_mobile_header_clicks = 0;
+		$total_unknown_header_clicks = 0;
 		$total_desktop_impressions = 0;
 		$total_mobile_impressions = 0;
 		$total_unknown_impressions = 0;
@@ -570,8 +585,11 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 			$total_views += (int) $daily[ $i ]['impressions'];
 			$total_click += (int) $daily[ $i ]['clicks'];
 			$total_signature_clicks += (int) $daily[ $i ]['signature_clicks'];
+			$total_header_clicks += (int) $daily[ $i ]['header_clicks'];
 			$total_desktop_signature_clicks += (int) $daily[ $i ]['desktop_signature_clicks'];
 			$total_mobile_signature_clicks += (int) $daily[ $i ]['mobile_signature_clicks'];
+			$total_desktop_header_clicks += (int) $daily[ $i ]['desktop_header_clicks'];
+			$total_mobile_header_clicks += (int) $daily[ $i ]['mobile_header_clicks'];
 			$total_desktop_impressions += (int) $daily[ $i ]['desktop_impressions'];
 			$total_mobile_impressions += (int) $daily[ $i ]['mobile_impressions'];
 			$total_desktop_clicks += (int) $daily[ $i ]['desktop_clicks'];
@@ -581,6 +599,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 		$total_unknown_impressions = max( 0, $total_views - $total_desktop_impressions - $total_mobile_impressions );
 		$total_unknown_clicks = max( 0, $total_click - $total_desktop_clicks - $total_mobile_clicks );
 		$total_unknown_signature_clicks = max( 0, $total_signature_clicks - $total_desktop_signature_clicks - $total_mobile_signature_clicks );
+		$total_unknown_header_clicks = max( 0, $total_header_clicks - $total_desktop_header_clicks - $total_mobile_header_clicks );
 
 		if ( $total_views > 0 ) {
 			$ctr = round( ( $total_click / $total_views ) * 100, 2 );
@@ -598,7 +617,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 
 		echo '<div class="wrap">';
 		echo '<h1>Forum advertentie stats</h1>';
-		echo '<p>Overzicht van impressies en kliks op de vaste advertentie en van kliks op links in bbPress-handtekeningen.</p>';
+		echo '<p>Overzicht van advertentie-impressies, advertentiekliks, handtekeningkliks en mini-cursuskliks uit de siteheader.</p>';
 		echo '<form method="get" style="margin:16px 0 20px;">';
 		echo '<input type="hidden" name="page" value="zf-forum-ad-stats">';
 		echo '<label for="zf-forum-ad-stats-days"><strong>Periode</strong></label> ';
@@ -618,19 +637,23 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Onbekende impressies</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_unknown_impressions ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Advertentiekliks</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_click ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Handtekening kliks</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_signature_clicks ) ) . '</div></div>';
+		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Mini-cursus header</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_header_clicks ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Desktop advertentiekliks</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_desktop_clicks ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Mobiele advertentiekliks</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_mobile_clicks ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Onbekende advertentiekliks</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_unknown_clicks ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Handtekening desktop</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_desktop_signature_clicks ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Handtekening mobiel</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_mobile_signature_clicks ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Handtekening onbekend</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_unknown_signature_clicks ) ) . '</div></div>';
+		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Mini-cursus desktop</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_desktop_header_clicks ) ) . '</div></div>';
+		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Mini-cursus mobiel</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_mobile_header_clicks ) ) . '</div></div>';
+		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Mini-cursus onbekend</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $total_unknown_header_clicks ) ) . '</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">CTR</div><div style="font-size:28px;font-weight:700;">' . esc_html( number_format_i18n( $ctr, 2 ) ) . '%</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Desktop CTR</div><div style="font-size:28px;font-weight:700;">' . esc_html( $desktop_ctr_label ) . '</div><div style="font-size:12px;color:#646970;">' . esc_html( number_format_i18n( $total_desktop_clicks ) ) . ' kliks / ' . esc_html( number_format_i18n( $total_desktop_impressions ) ) . ' impressies</div></div>';
 		echo '<div style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:16px;min-width:180px;"><div style="font-size:12px;text-transform:uppercase;color:#646970;">Mobiele CTR</div><div style="font-size:28px;font-weight:700;">' . esc_html( $mobile_ctr_label ) . '</div><div style="font-size:12px;color:#646970;">' . esc_html( number_format_i18n( $total_mobile_clicks ) ) . ' kliks / ' . esc_html( number_format_i18n( $total_mobile_impressions ) ) . ' impressies</div></div>';
 		echo '</div>';
 
 		echo '<h2>Kliks per topic</h2>';
-		echo '<p>Topics zonder advertentieklik worden niet afzonderlijk opgeslagen.</p>';
+		echo '<p>Header- en handtekeningkliks kunnen bewust zonder topic of forum worden opgeslagen wanneer ze sitebreed zijn gemeten.</p>';
 		echo '<table class="widefat striped"><thead><tr><th>Bestemming</th><th>Plaatsing</th><th>Apparaat</th><th>Forum</th><th>Topic</th><th>Kliks</th><th>Laatste klik</th></tr></thead><tbody>';
 
 		if ( empty( $summary ) ) {
@@ -644,7 +667,13 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 				$forum_label = ! empty( $row['forum_title'] ) ? $row['forum_title'] : '-';
 				$topic_label = ! empty( $row['topic_title'] ) ? $row['topic_title'] : '-';
 				$device_label = 'Onbekend';
-				$placement_label = 'select_signature' === $row['event_type'] ? 'Handtekening' : 'Advertentie';
+				$placement_label = 'Advertentie';
+
+				if ( 'select_signature' === $row['event_type'] ) {
+					$placement_label = 'Handtekening';
+				} elseif ( 'select_header_link' === $row['event_type'] ) {
+					$placement_label = 'Mini-cursus header';
+				}
 
 				if ( 'desktop' === $row['device_type'] ) {
 					$device_label = 'Desktop';
@@ -666,19 +695,23 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 
 		echo '</tbody></table>';
 		echo '<h2 style="margin-top:28px;">Per dag</h2>';
-		echo '<table class="widefat striped"><thead><tr><th>Datum</th><th>Impressies</th><th>Advertentiekliks</th><th>Handtekeningkliks</th><th>Desktop imp.</th><th>Desktop adkliks</th><th>Desktop handtekening</th><th>Desktop CTR</th><th>Mobiel imp.</th><th>Mobiele adkliks</th><th>Mobiele handtekening</th><th>Mobiele CTR</th><th>Handtekening onbekend</th><th>CTR totaal</th></tr></thead><tbody>';
+		echo '<table class="widefat striped"><thead><tr><th>Datum</th><th>Impressies</th><th>Advertentiekliks</th><th>Handtekeningkliks</th><th>Mini-cursuskliks</th><th>Desktop imp.</th><th>Desktop adkliks</th><th>Desktop handtekening</th><th>Desktop mini</th><th>Desktop CTR</th><th>Mobiel imp.</th><th>Mobiele adkliks</th><th>Mobiele handtekening</th><th>Mobiele mini</th><th>Mobiele CTR</th><th>Handtekening onbekend</th><th>Mini onbekend</th><th>CTR totaal</th></tr></thead><tbody>';
 
 		if ( empty( $daily ) ) {
-			echo '<tr><td colspan="14">Nog geen dagelijkse data gevonden in deze periode.</td></tr>';
+			echo '<tr><td colspan="18">Nog geen dagelijkse data gevonden in deze periode.</td></tr>';
 		} else {
 			for ( $i = 0; $i < count( $daily ); $i++ ) {
 				$row             = $daily[ $i ];
 				$day_impressions = (int) $row['impressions'];
 				$day_clicks      = (int) $row['clicks'];
 				$day_signature_clicks = (int) $row['signature_clicks'];
+				$day_header_clicks = (int) $row['header_clicks'];
 				$day_desktop_signature_clicks = (int) $row['desktop_signature_clicks'];
 				$day_mobile_signature_clicks = (int) $row['mobile_signature_clicks'];
 				$day_unknown_signature_clicks = max( 0, $day_signature_clicks - $day_desktop_signature_clicks - $day_mobile_signature_clicks );
+				$day_desktop_header_clicks = (int) $row['desktop_header_clicks'];
+				$day_mobile_header_clicks = (int) $row['mobile_header_clicks'];
+				$day_unknown_header_clicks = max( 0, $day_header_clicks - $day_desktop_header_clicks - $day_mobile_header_clicks );
 				$day_desktop_impressions = (int) $row['desktop_impressions'];
 				$day_mobile_impressions = (int) $row['mobile_impressions'];
 				$day_desktop_clicks = (int) $row['desktop_clicks'];
@@ -694,15 +727,19 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_admin_page' ) ) {
 				echo '<td>' . esc_html( number_format_i18n( $day_impressions ) ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_clicks ) ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_signature_clicks ) ) . '</td>';
+				echo '<td>' . esc_html( number_format_i18n( $day_header_clicks ) ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_desktop_impressions ) ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_desktop_clicks ) ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_desktop_signature_clicks ) ) . '</td>';
+				echo '<td>' . esc_html( number_format_i18n( $day_desktop_header_clicks ) ) . '</td>';
 				echo '<td>' . esc_html( $day_desktop_ctr_label ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_mobile_impressions ) ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_mobile_clicks ) ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_mobile_signature_clicks ) ) . '</td>';
+				echo '<td>' . esc_html( number_format_i18n( $day_mobile_header_clicks ) ) . '</td>';
 				echo '<td>' . esc_html( $day_mobile_ctr_label ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_unknown_signature_clicks ) ) . '</td>';
+				echo '<td>' . esc_html( number_format_i18n( $day_unknown_header_clicks ) ) . '</td>';
 				echo '<td>' . esc_html( number_format_i18n( $day_ctr, 2 ) ) . '%</td>';
 				echo '</tr>';
 			}
@@ -731,9 +768,13 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_dashboard_widget' ) ) {
 		$total_views = 0;
 		$total_click = 0;
 		$total_signature_clicks = 0;
+		$total_header_clicks = 0;
 		$total_desktop_signature_clicks = 0;
 		$total_mobile_signature_clicks = 0;
 		$total_unknown_signature_clicks = 0;
+		$total_desktop_header_clicks = 0;
+		$total_mobile_header_clicks = 0;
+		$total_unknown_header_clicks = 0;
 		$total_desktop_impressions = 0;
 		$total_mobile_impressions = 0;
 		$total_unknown_impressions = 0;
@@ -753,8 +794,11 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_dashboard_widget' ) ) {
 				$total_views += (int) $daily[ $i ]['impressions'];
 				$total_click += (int) $daily[ $i ]['clicks'];
 				$total_signature_clicks += (int) $daily[ $i ]['signature_clicks'];
+				$total_header_clicks += (int) $daily[ $i ]['header_clicks'];
 				$total_desktop_signature_clicks += (int) $daily[ $i ]['desktop_signature_clicks'];
 				$total_mobile_signature_clicks += (int) $daily[ $i ]['mobile_signature_clicks'];
+				$total_desktop_header_clicks += (int) $daily[ $i ]['desktop_header_clicks'];
+				$total_mobile_header_clicks += (int) $daily[ $i ]['mobile_header_clicks'];
 				$total_desktop_impressions += (int) $daily[ $i ]['desktop_impressions'];
 				$total_mobile_impressions += (int) $daily[ $i ]['mobile_impressions'];
 				$total_desktop_clicks += (int) $daily[ $i ]['desktop_clicks'];
@@ -764,6 +808,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_dashboard_widget' ) ) {
 		$total_unknown_impressions = max( 0, $total_views - $total_desktop_impressions - $total_mobile_impressions );
 		$total_unknown_clicks = max( 0, $total_click - $total_desktop_clicks - $total_mobile_clicks );
 		$total_unknown_signature_clicks = max( 0, $total_signature_clicks - $total_desktop_signature_clicks - $total_mobile_signature_clicks );
+		$total_unknown_header_clicks = max( 0, $total_header_clicks - $total_desktop_header_clicks - $total_mobile_header_clicks );
 
 			for ( $i = 0; $i < count( $summary ); $i++ ) {
 				$row = $summary[ $i ];
@@ -793,12 +838,16 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_dashboard_widget' ) ) {
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Onbekende imp.</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_unknown_impressions ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Advertentiekliks</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_click ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Handtekening</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_signature_clicks ) ) . '</div></div>';
+		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Mini-cursus</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_header_clicks ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Desktop adkliks</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_desktop_clicks ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Mobiele adkliks</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_mobile_clicks ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Onbekende adkliks</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_unknown_clicks ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Handt. desktop</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_desktop_signature_clicks ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Handt. mobiel</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_mobile_signature_clicks ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Handt. onbekend</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_unknown_signature_clicks ) ) . '</div></div>';
+		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Mini desktop</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_desktop_header_clicks ) ) . '</div></div>';
+		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Mini mobiel</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_mobile_header_clicks ) ) . '</div></div>';
+		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Mini onbekend</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $total_unknown_header_clicks ) ) . '</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">30d CTR</div><div style="font-size:24px;font-weight:700;">' . esc_html( number_format_i18n( $ctr, 2 ) ) . '%</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Desktop CTR</div><div style="font-size:24px;font-weight:700;">' . esc_html( $desktop_ctr_label ) . '</div><div style="font-size:11px;color:#646970;">' . esc_html( number_format_i18n( $total_desktop_clicks ) ) . ' kliks / ' . esc_html( number_format_i18n( $total_desktop_impressions ) ) . ' imp.</div></div>';
 		echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:8px;padding:12px;"><div style="font-size:11px;text-transform:uppercase;color:#646970;">Mobiele CTR</div><div style="font-size:24px;font-weight:700;">' . esc_html( $mobile_ctr_label ) . '</div><div style="font-size:11px;color:#646970;">' . esc_html( number_format_i18n( $total_mobile_clicks ) ) . ' kliks / ' . esc_html( number_format_i18n( $total_mobile_impressions ) ) . ' imp.</div></div>';
@@ -809,7 +858,7 @@ if ( ! function_exists( 'zf_forum_ad_stats_render_dashboard_widget' ) ) {
 			echo '<p style="margin:0 0 6px;"><a href="' . esc_url( $top_row['destination_url'] ) . '" target="_blank" rel="noopener">' . esc_html( $top_row['destination_url'] ) . '</a></p>';
 			echo '<p style="margin:0;color:#50575e;">' . esc_html( ! empty( $top_row['topic_title'] ) ? $top_row['topic_title'] : '-' ) . ' | ' . esc_html( number_format_i18n( (int) $top_row['clicks'] ) ) . ' kliks</p>';
 		} else {
-			echo '<p style="margin:0;">Nog geen advertentiedata beschikbaar.</p>';
+			echo '<p style="margin:0;">Nog geen meetdata beschikbaar.</p>';
 		}
 
 		echo '<p style="margin:14px 0 0;"><a href="' . esc_url( admin_url( 'admin.php?page=zf-forum-ad-stats' ) ) . '">Volledig overzicht openen</a></p>';

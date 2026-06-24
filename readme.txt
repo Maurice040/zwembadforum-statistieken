@@ -2,7 +2,7 @@
 Contributors: zwembadforum
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.3.3
+Stable tag: 1.3.4
 
 Meet impressies en kliks op advertenties en kliks op handtekeninglinks op bbPress-topicpagina's.
 
@@ -14,6 +14,7 @@ Meet impressies en kliks op advertenties en kliks op handtekeninglinks op bbPres
 * Registreert per bezoeker, topic en bestemming maximaal een impressie per 30 minuten.
 * Registreert advertentiekliks.
 * Registreert kliks op links in bbPress-handtekeningen als aparte plaatsing.
+* Registreert kliks op de mini-cursuslink in de siteheader als aparte plaatsing.
 * Toont een zelfstandig overzicht onder Advertentie stats in wp-admin.
 * Toont de totalen van de laatste 30 dagen op het WordPress-hoofddashboard.
 * Splitst advertentiekliks uit naar desktop en mobiel.
@@ -34,6 +35,12 @@ Meet impressies en kliks op advertenties en kliks op handtekeninglinks op bbPres
 De statistiektabel blijft bij deactiveren behouden.
 
 == Changelog ==
+
+= 1.3.4 =
+* Meet kliks op mini-cursuslinks in de header als aparte plaatsing.
+* Werkt niet langer alleen op bbPress-topicpagina's, zodat sitebrede headerlinks ook meetbaar zijn.
+* Splitst mini-cursuskliks uit naar desktop, mobiel en onbekend in het beheeroverzicht en dashboard.
+* Herkent headerlinks via `data-zf-track="mini-cursus"`, `.zf-mini-cursus-link` of een `href` met `mini-cursus`.
 
 = 1.3.3 =
 * Splitst handtekeningkliks apart uit naar desktop, mobiel en onbekend.
